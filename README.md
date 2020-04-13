@@ -1,3 +1,5 @@
 # Covid19
 
-This is another Readme.md file.
+Generate visualizations to help follow the evolution of the Covid-19 pandemic.
+
+
