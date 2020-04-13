@@ -97,6 +97,8 @@ TOTAL_IN_CHG   | (Total number of hospitalized patients at the moment of reporti
 NEW_DELTA      | (Number of new hospital intakes) - (new hospital discharges (alive) in the last 24h) 
 
 
+Summarized data: [csv](https://raw.githubusercontent.com/jmbo1190/Covid19/master/COVID19BE_HOSP_sum.csv) [json](https://raw.githubusercontent.com/jmbo1190/Covid19/master/COVID19BE_HOSP_sum.json)
+
 -----
 
 #### 2020-04-13 - Updated to include Figures by Province
@@ -178,10 +180,9 @@ country <- country0  %>%
   mutate(full_reporting = (MAX_REPORTING == NR_REPORTING)) %>%
   rename_all(stringr::str_to_title)
 
-# write(jsonlite::toJSON(country), 'COVID19BE_HOSP_sum.json')
-# write.csv(country, file = 'COVID19BE_HOSP_sum.csv')
+write(jsonlite::toJSON(country), 'COVID19BE_HOSP_sum.json')
+write.csv(country, file = 'COVID19BE_HOSP_sum.csv')
 
-# link to Summarized data: [csv](COVID19BE_HOSP_sum.csv) [json](COVID19BE_HOSP_sum.json)
 
 
 
