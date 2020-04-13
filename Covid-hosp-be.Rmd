@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, echo=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+# options(encoding = 'UTF-8')
 ```
 
 ## Covid-19 Hospitalizations in Belgium
@@ -95,10 +96,21 @@ Full_reporting | Whether the number of hospitals reporting is equal to the maxim
 TOTAL_IN_CHG   | (Total number of hospitalized patients at the moment of reporting) - (Total number of hospitalized patients the previous day)
 NEW_DELTA      | (Number of new hospital intakes) - (new hospital discharges (alive) in the last 24h) 
 
-#### Updated to include Figures by Province
 
-As shown below, the evolution is not identical in all provinces.
+-----
 
+#### 2020-04-13 - Updated to include Figures by Province
+
+As shown below, the evolution is _not identical_ in all provinces.  
+
+
+* __As of April 13th:__
+
+  * The total number hospitalized is still on the rise in the province of Namur.
+  * The numbers in intensive care are increasing in the provinces of Namur and Oost-Vlaanderen.  
+  * The numbers of patients under extracorporeal membrane oxygenation are still on a rising trend in all provinces except Vlaams Brabant, West-Vlaanderen, Li&egrave;ge and Brabant Wallon.
+
+-----
 
 ```{r hosp_be, echo=FALSE, warning=FALSE}
 # hosp <- data.table::fread("https://epistat.sciensano.be/Data/20200409/COVID19BE_HOSP_20200409.csv")
@@ -166,7 +178,10 @@ country <- country0  %>%
   mutate(full_reporting = (MAX_REPORTING == NR_REPORTING)) %>%
   rename_all(stringr::str_to_title)
 
+# write(jsonlite::toJSON(country), 'COVID19BE_HOSP_sum.json')
+# write.csv(country, file = 'COVID19BE_HOSP_sum.csv')
 
+# link to Summarized data: [csv](COVID19BE_HOSP_sum.csv) [json](COVID19BE_HOSP_sum.json)
 
 
 
