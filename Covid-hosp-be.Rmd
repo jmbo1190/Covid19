@@ -1,8 +1,9 @@
 ---
 title: "Covid-19 Hospitalizations in Belgium"
 author: "Jean-Michel Bodart"
-date: "2020-04-13"
-output: html_document
+date: "`r date()`"
+output:
+  html_document: default
 ---
 
 ```{r setup, echo=FALSE, include=FALSE}
@@ -10,8 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 # options(encoding = 'UTF-8')
 ```
 
-## Covid-19 Hospitalizations in Belgium
-
+Purpose: provide an overview of the evolution of Covid-19-related hospitalizations in Belgium, by Region and Province. 
 
 ```{r get_hosp_be, echo=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
@@ -21,6 +21,8 @@ library(httr)
 library(lubridate)
 library(ggplot2)
 library(knitr)
+library(stringr)
+library(textclean)
 #library(purrr)
 })
 reqdate <- format(seq.Date(as.Date(now()), by=-1, length.out=10), "%Y%m%d")
@@ -64,15 +66,19 @@ dt <- sources$lastmodifdt[wh[1]]
 
 ```
 
-#### Source: `r url`
+## Source Data Sets
 
-Data last modified: `r format(dt, usetz = TRUE)`.
-
+-----
 
 ### COVID19BE_HOSP (HOSPITALISATIONS BY DATE AND PROVINCE) 
 
-#### Dataset description: https://epistat.sciensano.be/COVID19BE_codebook.pdf.
+Source: `r url`
 
+Data last modified: `r format(dt, usetz = TRUE)`.
+
+Dataset [description](https://epistat.sciensano.be/COVID19BE_codebook.pdf).
+
+#### Source Variables
 
 Variable      | Definition 
 ------------- | ---------
@@ -96,10 +102,87 @@ Full_reporting | Whether the number of hospitals reporting is equal to the maxim
 TOTAL_IN_CHG   | (Total number of hospitalized patients at the moment of reporting) - (Total number of hospitalized patients the previous day)
 NEW_DELTA      | (Number of new hospital intakes) - (new hospital discharges (alive) in the last 24h) 
 
+Source code: [Github](https://github.com/jmbo1190/Covid19)
 
 Summarized data: [csv](https://raw.githubusercontent.com/jmbo1190/Covid19/master/COVID19BE_HOSP_sum.csv) [json](https://raw.githubusercontent.com/jmbo1190/Covid19/master/COVID19BE_HOSP_sum.json)
 
 -----
+
+
+### Belgium Population by Province
+
+Source: Official data from https://bestat.statbel.fgov.be/bestat/
+
+C01.1: Population par lieu de r&eacute;sidence (province), sexe, position dans le m&eacute;nage (C), &eacute;tat civil et &acirc;ge (B) 
+
+[csv](https://bestat.statbel.fgov.be/bestat/api/views/0f14f470-9a59-4011-ac98-92ebe2df31ff/result/CSV)
+[json](https://bestat.statbel.fgov.be/bestat/api/views/0f14f470-9a59-4011-ac98-92ebe2df31ff/result/JSON)
+
+-----
+
+```{r pop_be, echo=FALSE, warning=FALSE}
+pop0 <- data.table::fread("https://bestat.statbel.fgov.be/bestat/api/views/0f14f470-9a59-4011-ac98-92ebe2df31ff/result/CSV", 
+                         encoding="UTF-8",
+                         showProgress = FALSE)
+colnames(pop0) <- c("Country", "Region", "Province", "Total", "Household_Position", "Population")
+
+pop0$Region <- replace_non_ascii(pop0$Region)
+pop0$Province <- replace_non_ascii(pop0$Province)
+prov_en <- c("Bruxelles-Capitale" = "Brussels", 
+             "Province d’Anvers" = "Antwerpen", 
+             "Limbourg" = "Limburg", 
+             "Flandre orientale" = "OostVlaanderen", 
+             "Brabant flamand" = "VlaamsBrabant", 
+             "Flandre occidentale" = "WestVlaanderen", 
+             "Brabant wallon" = "BrabantWallon", 
+             "Hainaut" = "Hainaut", 
+             "Liege" = "Liege", 
+             "Luxembourg" = "Luxembourg", 
+             "Namur" = "Namur",
+             "All" = "All")
+
+pop1 <- pop0 %>% 
+  filter(Household_Position == '') %>% 
+  select(-Household_Position, -Total) %>%
+  mutate(Country = str_replace(Country, 'Belgique', 'Belgium'),
+         Region = str_replace(Region, 'R.+gion de Bruxelles-Capitale', 'Brussels'),
+         Region = str_replace(Region, 'R.+gion flamande', 'Flanders'),
+         Region = str_replace(Region, 'R.+gion wallonne', 'Wallonia'),
+         Region=if_else(Region=='', "All", Region),
+         Region=str_squish(Region),
+         Province = str_replace(Province, "(R.+gion|Province) (du |de |d')", ''),
+         Province=if_else(Province=='', "All", Province),
+         Province=prov_en[Province]
+         ) %>%
+  arrange(Population)
+
+pop <- pop1 %>%
+  filter(Province != "All") %>%
+  group_by(Country, Region) %>%
+  summarise(Population = sum(Population)) %>%
+  ungroup() %>%
+  mutate(Province = "All") %>%
+  select(Country, Region, Province, Population) %>%
+  rbind(pop1) %>%
+  # filter(Province != "All" | Region != "Brussels") %>%
+  arrange(Population)
+  
+
+```
+
+
+## Revision History
+
+#### 2020-04-15 - Added Belgium Population Data by Province
+
+Added link to Source Code
+
+Added Figures for:
+
+* Number of Patients Hospitalized per Million Inhabitants by Province
+* Number of Patients in Intensive Care per Million Inhabitants by Province
+* Number of Patients under Respiratory Support per Million Inhabitants by Province
+
 
 #### 2020-04-13 - Updated to include Figures by Province
 
@@ -117,7 +200,7 @@ As shown below, the evolution is _not identical_ in all provinces.
 ```{r hosp_be, echo=FALSE, warning=FALSE}
 # hosp <- data.table::fread("https://epistat.sciensano.be/Data/20200409/COVID19BE_HOSP_20200409.csv")
 
-hosp0 <- data.table::fread(sources$url[wh[1]]) %>%
+hosp0 <- data.table::fread(sources$url[wh[1]], showProgress = FALSE) %>%
   mutate(DATE = as.Date(DATE), NEW_DELTA = NEW_IN - NEW_OUT) %>%
   arrange(REGION, PROVINCE, DATE)
 
@@ -139,7 +222,8 @@ hosp <- hosp0 %>%
         funs(CHG = . - lag(.))       # compute change from previous record
                                      # and store as variable with added suffix "_CHG"
       ) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(PROVINCE = str_replace(PROVINCE, "Li.+ge", "Liege")) 
      
 
 hospt <- pivot_longer(data = hosp
@@ -167,8 +251,8 @@ region <- hospt %>%
 country0 <- hospt %>%
   group_by(country, DATE, category) %>%
   summarise(NR_REPORTING = sum(NR_REPORTING), count = sum(count)) %>%
-  mutate(REGION="All", PROVINCE="All") %>%
   ungroup() %>%
+  mutate(REGION="All", PROVINCE="All") %>%
   select(country, REGION, PROVINCE, DATE, NR_REPORTING, category, count) %>%
   rbind(region) %>%
   arrange(country, REGION, PROVINCE, DATE, NR_REPORTING, category)
@@ -176,14 +260,19 @@ country0 <- hospt %>%
 country <- country0  %>%
   group_by(country, REGION, PROVINCE) %>%
   summarize(MAX_REPORTING = max(NR_REPORTING)) %>%
-  full_join(country0) %>%
+  ungroup() %>%
+  full_join(country0, by = c("country", "REGION", "PROVINCE")) %>%
   mutate(full_reporting = (MAX_REPORTING == NR_REPORTING)) %>%
-  rename_all(stringr::str_to_title)
+  rename_all(stringr::str_to_title) %>%
+  left_join(pop, by = c("Country", "Region", "Province")) %>%
+  mutate(Count_per_1M = Count * 1E6 / Population)
 
 write(jsonlite::toJSON(country), 'COVID19BE_HOSP_sum.json')
 write.csv(country, file = 'COVID19BE_HOSP_sum.csv')
 
-
+# country %>% 
+#   select(Country, Region, Province, Population) %>%
+#   unique()
 
 
 ```
@@ -261,7 +350,7 @@ for (r in unique(country$Region)) {
 }
 ```
 
-
+------
 
 ### Daily Admissions, Discharges and Changes in Total Number of Patients Hospitalized by Province
 ```{r Adm_Disch_by_Prov, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
@@ -298,6 +387,8 @@ for (P in provinces) {
   
 }
 ```
+
+-----
 
 ### Number of Patients Hospitalized in Belgium and by Region
 
@@ -341,8 +432,9 @@ ggplot(hosp_sum, aes(x = DATE, y = TOTAL_IN, colour = REGION)) +
         panel.grid.major.y = element_blank())
 ```
 
+-----
 
-### Number of Patients Hospitalized in Belgium by Region and by Province
+### Number of Patients Hospitalized in Belgium by Province
 
 
 ```{r hosp_prov_sum, echo=FALSE}
@@ -362,8 +454,11 @@ hosp_p_sum <- hosp %>%
 mb <- as.numeric(1:9 %o% 10 ^ (1:4))
 
 for (r in c("Flanders", "Wallonia")) {
+  
+  subset <- hosp_p_sum %>% filter(REGION == r)
 
-(ggplot(hosp_p_sum %>% filter(REGION == r), aes(x = DATE, y = TOTAL_IN, colour = PROVINCE)) + 
+(ggplot(subset, 
+        aes(x = DATE, y = TOTAL_IN, colour = PROVINCE)) + 
   scale_y_log10(minor_breaks = log10(mb),
                 # breaks = scales::trans_breaks("log10", function(x) 10^x),
                 # labels = scales::trans_format("log10", scales::math_format(10^.x))
@@ -390,6 +485,88 @@ for (r in c("Flanders", "Wallonia")) {
 }  
 ```
 
+
+```{r TOTAL_IN_Reg_per_1M, echo=FALSE, fig.width=11, out.width='100%'}
+# Note that the `echo = FALSE` parameter was added to the code chunk 
+# to prevent printing of the R code that generated the plot.
+
+
+mb <- as.numeric(1:9 %o% 10 ^ (1:4))
+
+subset <- country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN")
+
+(ggplot(subset, 
+        aes(x = Date, y = Count_per_1M, colour = Region)) + 
+  scale_y_log10(minor_breaks = log10(mb),
+                # breaks = scales::trans_breaks("log10", function(x) 10^x),
+                # labels = scales::trans_format("log10", scales::math_format(10^.x))
+                ) +
+  annotation_logticks(sides="lr", colour = "white",
+                      short = unit(1, "npc"),
+                      mid = unit(1, "npc"),
+                      long = unit(1, "npc")
+  ) +
+  expand_limits(y = 1) +
+  geom_smooth() +
+  geom_line(linetype='dotted') +
+  geom_point() +
+  ggtitle(paste(r, "- Total Number of Patients Hospitalized per Million Inhabitants by Region - last updated", format(dt, usetz = TRUE)), 
+          subtitle = paste0("Source: ", url)) + 
+  xlab("Date") +
+  ylab("Total Patients Hospitalized per Million") +
+  theme(axis.text.x = element_text(angle = 90),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank()
+        )
+ ) %>% print()
+  
+
+
+```
+
+```{r TOTAL_IN_prov_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+# Note that the `echo = FALSE` parameter was added to the code chunk 
+# to prevent printing of the R code that generated the plot.
+
+
+mb <- as.numeric(1:9 %o% 10 ^ (1:4))
+
+for (r in c("Flanders", "Wallonia")) {
+
+  subset <- country %>% filter(Region == r & Category == "TOTAL_IN" & Province != "All")
+  
+(ggplot(subset, 
+        aes(x = Date, y = Count_per_1M, colour = Province)) + 
+  scale_y_log10(minor_breaks = log10(mb),
+                # breaks = scales::trans_breaks("log10", function(x) 10^x),
+                # labels = scales::trans_format("log10", scales::math_format(10^.x))
+                ) +
+  annotation_logticks(sides="lr", colour = "white",
+                      short = unit(1, "npc"),
+                      mid = unit(1, "npc"),
+                      long = unit(1, "npc")
+  ) +
+  expand_limits(y = 1) +
+  geom_smooth() +
+  geom_line(linetype='dotted') +
+  geom_point() +
+  ggtitle(paste(r, "- Total Number of Patients Hospitalized per Million Inhabitants by Province - last updated", format(dt, usetz = TRUE)), 
+          subtitle = paste0("Source: ", url)) + 
+  xlab("Date") +
+  ylab("Total Patients Hospitalized per Million") +
+  theme(axis.text.x = element_text(angle = 90),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank()
+        )
+ ) %>% print()
+  
+}  
+```
+-----
+
+### Number of Patients In Intensive Care in Belgium by Province
+
+
 ```{r TOTAL_IN_ICU_prov, echo=FALSE, fig.width=11, out.width='100%'}
 for (r in c("Flanders", "Wallonia")) {
   
@@ -398,7 +575,7 @@ for (r in c("Flanders", "Wallonia")) {
     geom_line(linetype='dotted') +
     geom_point() +
     #scale_y_log10() +
-    ggtitle(paste("Belgium - Total Number of Patients in Intensive Care by Province - last updated", format(dt, usetz = TRUE)), 
+    ggtitle(paste(r, "- Total Number of Patients in Intensive Care by Province - last updated", format(dt, usetz = TRUE)), 
             subtitle = paste0("Source: ", url)) + 
     xlab("Date") +
     ylab("Total Patients in Intensive Care") +
@@ -406,6 +583,29 @@ for (r in c("Flanders", "Wallonia")) {
   ) %>% print()
 }
 ```
+
+
+```{r TOTAL_IN_ICU_prov_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+for (r in c("Flanders", "Wallonia")) {
+  
+  (ggplot(country %>% filter(Region == r & Category == "TOTAL_IN_ICU" & Province != "All"), 
+          aes(x = Date, y = Count_per_1M, colour = Province)) + 
+    geom_smooth() +
+    geom_line(linetype='dotted') +
+    geom_point() +
+    #scale_y_log10() +
+    ggtitle(paste(r, "- Total Number of Patients in Intensive Care per Million Inhabitants by Province - last updated", format(dt, usetz = TRUE)), 
+            subtitle = paste0("Source: ", url)) + 
+    xlab("Date") +
+    ylab("Total Patients in Intensive Care per Million") +
+    theme(axis.text.x = element_text(angle = 90))
+  ) %>% print()
+}
+```
+
+-----
+
+### Number of Patients under Respiratory Support in Belgium, by Region and by Province
 
 
 ```{r TOTAL_IN_RESP, echo=FALSE, fig.width=11, out.width='100%'}
@@ -430,7 +630,7 @@ for (r in c("Flanders", "Wallonia")) {
     geom_line(linetype='dotted') +
     geom_point() +
     # scale_y_log10() +
-    ggtitle(paste(r, "- Total Number of Patients under Respiratory Support - last updated", format(dt, usetz = TRUE)), 
+    ggtitle(paste(r, "- Total Number of Patients under Respiratory Support by Province - last updated", format(dt, usetz = TRUE)), 
             subtitle = paste0("Source: ", url)) + 
     xlab("Date") +
     ylab("Total Patients under Respiratory Support") +
@@ -438,6 +638,33 @@ for (r in c("Flanders", "Wallonia")) {
   ) %>% print()
 }
 ```
+
+
+
+```{r TOTAL_IN_RESP_prov_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+for (r in c("Flanders", "Wallonia")) {
+  
+  (ggplot(country %>% filter(Region == r & Province != "All" & Category == "TOTAL_IN_RESP"), 
+          aes(x = Date, y = Count_per_1M, colour = Province)) + 
+    geom_smooth() +
+    geom_line(linetype='dotted') +
+    geom_point() +
+    # scale_y_log10() +
+    ggtitle(paste(r, "- Total Number of Patients under Respiratory Support per Million Inhabitants by Province - last updated", 
+                  format(dt, usetz = TRUE)), 
+            subtitle = paste0("Source: ", url)) + 
+    xlab("Date") +
+    ylab("Total Patients under Respiratory Support per Million") +
+    theme(axis.text.x = element_text(angle = 90))
+  ) %>% print()
+}
+```
+
+-----
+
+### Number of Patients on Extracorporeal Membrane Oxygenation in Belgium, by Region and by Province
+
+
 
 ```{r TOTAL_IN_ECMO, echo=FALSE, fig.width=11, out.width='100%'}
 ggplot(hosp_sum, aes(x = DATE, y = TOTAL_IN_ECMO, colour = REGION)) + 
