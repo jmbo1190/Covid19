@@ -130,6 +130,7 @@ pop0$Region <- replace_non_ascii(pop0$Region)
 pop0$Province <- replace_non_ascii(pop0$Province)
 prov_en <- c("Bruxelles-Capitale" = "Brussels", 
              "Province d’Anvers" = "Antwerpen", 
+             "Anvers" = "Antwerpen", 
              "Limbourg" = "Limburg", 
              "Flandre orientale" = "OostVlaanderen", 
              "Brabant flamand" = "VlaamsBrabant", 
@@ -152,7 +153,8 @@ pop1 <- pop0 %>%
          Region=str_squish(Region),
          Province = str_replace(Province, "(R.+gion|Province) (du |de |d')", ''),
          Province=if_else(Province=='', "All", Province),
-         Province=prov_en[Province]
+         Province=prov_en[Province],
+         Province=replace_non_ascii(Province)
          ) %>%
   arrange(Population)
 
@@ -264,7 +266,7 @@ country <- country0  %>%
   full_join(country0, by = c("country", "REGION", "PROVINCE")) %>%
   mutate(full_reporting = (MAX_REPORTING == NR_REPORTING)) %>%
   rename_all(stringr::str_to_title) %>%
-  left_join(pop, by = c("Country", "Region", "Province")) %>%
+  full_join(pop, by = c("Country", "Region", "Province")) %>%
   mutate(Count_per_1M = Count * 1E6 / Population)
 
 write(jsonlite::toJSON(country), 'COVID19BE_HOSP_sum.json')
@@ -432,6 +434,46 @@ ggplot(hosp_sum, aes(x = DATE, y = TOTAL_IN, colour = REGION)) +
         panel.grid.major.y = element_blank())
 ```
 
+```{r TOTAL_IN_Reg_per_1M, echo=FALSE, fig.width=11, out.width='100%'}
+# Note that the `echo = FALSE` parameter was added to the code chunk 
+# to prevent printing of the R code that generated the plot.
+
+
+mb <- as.numeric(1:9 %o% 10 ^ (1:4))
+
+subset <- country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN")
+
+subset <- subset %>%  mutate(Province=replace_non_ascii(Province))
+
+(ggplot(subset, 
+        aes(x = Date, y = Count_per_1M, colour = Region)) + 
+  scale_y_log10(minor_breaks = log10(mb),
+                # breaks = scales::trans_breaks("log10", function(x) 10^x),
+                # labels = scales::trans_format("log10", scales::math_format(10^.x))
+                ) +
+  annotation_logticks(sides="lr", colour = "white",
+                      short = unit(1, "npc"),
+                      mid = unit(1, "npc"),
+                      long = unit(1, "npc")
+  ) +
+  expand_limits(y = 1) +
+  geom_smooth() +
+  geom_line(linetype='dotted') +
+  geom_point() +
+  ggtitle(paste(r, "- Total Number of Patients Hospitalized per Million Inhabitants by Region - last updated", format(dt, usetz = TRUE)), 
+          subtitle = paste0("Source: ", url)) + 
+  xlab("Date") +
+  ylab("Total Patients Hospitalized per Million") +
+  theme(axis.text.x = element_text(angle = 90),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank()
+        )
+ ) %>% print()
+  
+
+
+```
+
 -----
 
 ### Number of Patients Hospitalized in Belgium by Province
@@ -486,43 +528,6 @@ for (r in c("Flanders", "Wallonia")) {
 ```
 
 
-```{r TOTAL_IN_Reg_per_1M, echo=FALSE, fig.width=11, out.width='100%'}
-# Note that the `echo = FALSE` parameter was added to the code chunk 
-# to prevent printing of the R code that generated the plot.
-
-
-mb <- as.numeric(1:9 %o% 10 ^ (1:4))
-
-subset <- country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN")
-
-(ggplot(subset, 
-        aes(x = Date, y = Count_per_1M, colour = Region)) + 
-  scale_y_log10(minor_breaks = log10(mb),
-                # breaks = scales::trans_breaks("log10", function(x) 10^x),
-                # labels = scales::trans_format("log10", scales::math_format(10^.x))
-                ) +
-  annotation_logticks(sides="lr", colour = "white",
-                      short = unit(1, "npc"),
-                      mid = unit(1, "npc"),
-                      long = unit(1, "npc")
-  ) +
-  expand_limits(y = 1) +
-  geom_smooth() +
-  geom_line(linetype='dotted') +
-  geom_point() +
-  ggtitle(paste(r, "- Total Number of Patients Hospitalized per Million Inhabitants by Region - last updated", format(dt, usetz = TRUE)), 
-          subtitle = paste0("Source: ", url)) + 
-  xlab("Date") +
-  ylab("Total Patients Hospitalized per Million") +
-  theme(axis.text.x = element_text(angle = 90),
-        panel.grid.minor.y = element_blank(),
-        panel.grid.major.y = element_blank()
-        )
- ) %>% print()
-  
-
-
-```
 
 ```{r TOTAL_IN_prov_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
 # Note that the `echo = FALSE` parameter was added to the code chunk 
