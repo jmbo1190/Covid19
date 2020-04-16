@@ -567,6 +567,53 @@ for (r in c("Flanders", "Wallonia")) {
   
 }  
 ```
+
+-----
+
+### Number of Patients In Intensive Care in Belgium by Region
+
+
+```{r TOTAL_IN_ICU_REG, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+
+  (ggplot(country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN_ICU"), 
+          aes(x = Date, y = Count, colour = Region)) + 
+    geom_smooth() +
+    geom_line(linetype='dotted') +
+    geom_point() +
+    # scale_y_log10() +
+    ggtitle(paste("Belgium - Total Number of Patients in Intensive Care by Region - last updated", 
+                  format(dt, usetz = TRUE)), 
+            subtitle = paste0("Source: ", url)) + 
+    xlab("Date") +
+    ylab("Total Patients in Intensive Care") +
+    theme(axis.text.x = element_text(angle = 90))
+  ) %>% print()
+
+```
+
+
+
+```{r TOTAL_IN_ICU_REG_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+
+  (ggplot(country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN_ICU"), 
+          aes(x = Date, y = Count_per_1M, colour = Region)) + 
+    geom_smooth() +
+    geom_line(linetype='dotted') +
+    geom_point() +
+    # scale_y_log10() +
+    ggtitle(paste("Belgium - Total Number of Patients in Intensive Care per Million Inhabitants by Region - last updated", 
+                  format(dt, usetz = TRUE)), 
+            subtitle = paste0("Source: ", url)) + 
+    xlab("Date") +
+    ylab("Total Patients in Intensive Care per Million") +
+    theme(axis.text.x = element_text(angle = 90))
+  ) %>% print()
+
+```
+
+
+
+
 -----
 
 ### Number of Patients In Intensive Care in Belgium by Province
@@ -626,6 +673,23 @@ ggplot(hosp_sum, aes(x = DATE, y = TOTAL_IN_RESP, colour = REGION)) +
   theme(axis.text.x = element_text(angle = 90))
 ```
 
+```{r TOTAL_IN_RESP_REG_per_1M, echo=FALSE, fig.width=11, out.width='100%', warning=FALSE}
+
+  (ggplot(country %>% filter(Region != "All" & Province == "All" & Category == "TOTAL_IN_RESP"), 
+          aes(x = Date, y = Count_per_1M, colour = Region)) + 
+    geom_smooth() +
+    geom_line(linetype='dotted') +
+    geom_point() +
+    # scale_y_log10() +
+    ggtitle(paste("Belgium - Total Number of Patients under Respiratory Support per Million Inhabitants by Region - last updated", 
+                  format(dt, usetz = TRUE)), 
+            subtitle = paste0("Source: ", url)) + 
+    xlab("Date") +
+    ylab("Total Patients under Respiratory Support per Million") +
+    theme(axis.text.x = element_text(angle = 90))
+  ) %>% print()
+
+```
 
 ```{r TOTAL_IN_RESP_prov, echo=FALSE, fig.width=11, out.width='100%'}
 for (r in c("Flanders", "Wallonia")) {
