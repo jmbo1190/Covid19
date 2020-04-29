@@ -8,7 +8,7 @@ output:
 
 ```{r setup, echo=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
-# options(encoding = 'UTF-8')
+options(encoding = 'UTF-8')
 ```
 
 Purpose: provide an overview of the evolution of Covid-19-related hospitalizations in Belgium, by Region and Province. 
