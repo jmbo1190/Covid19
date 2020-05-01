@@ -1,2 +1,20 @@
-test1 test2 test3
-retest1 retest2 NA
+How to update datasets when new branch has conflicts?
+
+
+git fetch origin
+
+# git checkout -b test1 origin/test1
+# fatal: A branch named 'test1' already exists.
+
+ git add  COVID19BE_HOSP_sum.csv
+ git add  COVID19BE_HOSP_sum.json
+
+ git commit
+# [master eef8121] Merge branch 'test1'
+
+
+ git merge --no-ff test1
+
+ git merge master
+
+git push origin master
