@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/607204/9cc56583d394420998411bf83367c31c
+bundleId: https://api.rpubs.com/api/v1/document/607204/9cc56583d394420998411bf83367c31c
+url: http://rpubs.com/JMBodart/607204
+when: 1591281326.04313
